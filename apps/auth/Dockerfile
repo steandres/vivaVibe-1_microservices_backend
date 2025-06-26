@@ -1,29 +1,27 @@
-FROM node:alpine As development
+FROM node:18-alpine AS development
+
+# Instala Nest CLI globalmente
 RUN npm install -g @nestjs/cli
 
+# Establece directorio de trabajo
 WORKDIR /usr/src/app
 
-COPY package.json ./
-COPY package-lock.json ./
-
-RUN npm i
-
+# Copiá todo el proyecto
 COPY . .
 
-RUN npm run build
+# Instalá TODAS las dependencias del monorepo
+RUN npm install
 
-FROM node:alpine As production
+# Compilá solo el microservicio de auth
+RUN npm run build auth
 
-ARG NODE_ENV=production
-ENV NODE_ENV=${NODE_ENV}
+FROM node:18-alpine AS production
 
 WORKDIR /usr/src/app
 
-COPY package.json ./
-COPY package-lock.json ./
-
-RUN npm i
-
+# Copiá archivos ya compilados desde el build anterior
 COPY --from=development /usr/src/app/dist ./dist
+COPY package.json package-lock.json ./
+RUN npm install --only=production
 
 CMD ["node", "dist/apps/auth/main"]
